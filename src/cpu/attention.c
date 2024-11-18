@@ -254,3 +254,92 @@ void self_attention_backward(
 }
 
 
+void cross_attention_forward(
+    float* output, // B, T_dec, C
+    float* o_w,    // Output weights, shape (C, C)
+    float* o_b,    // Output biases, shape (C)
+    float* Q,      // Query, shape (B, T_dec, C)
+    float* K,      // Key, shape (B, T_enc, C)
+    float* V,      // Value, shape (B, T_enc, C)
+    float* scores, // Attention scores, shape (B, n_heads, T_dec, T_enc)
+    float* attn_weights, // Attention weights, shape (B, n_heads, T_dec, T_enc)
+    float* head_output, // Head output, shape (B, T_dec, C)
+    int B, int T_dec, int T_enc, int C,
+    int n_heads
+) {
+    int d_k = C / n_heads;
+
+    // calc Attention Scores (Q * K^T) for each head
+    for (int b = 0; b < B; b++) {
+        for (int h = 0; h < n_heads; h++) {
+            for (int t1 = 0; t1 < T_dec; t1++) { 
+                float max_score = -INFINITY;
+
+                for (int t2 = 0; t2 < T_enc; t2++) {  // Iterating over T_enc (from Key)
+                    float score = 0.0f;
+
+                    // Calculate the dot product between Q and K
+                    for (int d = 0; d < d_k; d++) {
+                        score += Q[b * T_dec * C + t1 * C + h * d_k + d] * 
+                                 K[b * T_enc * C + t2 * C + h * d_k + d];
+                    }
+                    // Scale the score by sqrt(d_k)
+                    score /= sqrtf(d_k);
+                    max_score = fmaxf(max_score, score);
+                    scores[b * n_heads * T_dec * T_enc + h * T_dec * T_enc + t1 * T_enc + t2] = score;
+                }
+
+                // Apply Softmax to Scores (with max norm for stability)
+                float sum = 0.0f;
+                for (int t2 = 0; t2 < T_enc; t2++) {
+                    float score = scores[b * n_heads * T_dec * T_enc + h * T_dec * T_enc + t1 * T_enc + t2];
+                    scores[b * n_heads * T_dec * T_enc + h * T_dec * T_enc + t1 * T_enc + t2] = expf(score - max_score);
+                    sum += expf(score);
+                }
+
+                // Normalize the scores to get the attention weights
+                for (int t2 = 0; t2 < T_enc; t2++) {
+                    attn_weights[b * n_heads * T_dec * T_enc + h * T_dec * T_enc + t1 * T_enc + t2] =
+                        scores[b * n_heads * T_dec * T_enc + h * T_dec * T_enc + t1 * T_enc + t2] / sum;
+                }
+            }
+        }
+    }
+
+    // find the weighted sum of values (V)
+    for (int b = 0; b < B; b++) {
+        for (int h = 0; h < n_heads; h++) {
+            for (int t1 = 0; t1 < T_dec; t1++) {
+                for (int d = 0; d < d_k; d++) {
+                    float weighted_sum = 0.0f;
+                    for (int t2 = 0; t2 < T_enc; t2++) {
+                        float attn = attn_weights[b * n_heads * T_dec * T_enc + h * T_dec * T_enc + t1 * T_enc + t2];
+                        float val = V[b * T_enc * C + t2 * C + h * d_k + d];
+                        weighted_sum += attn * val;
+                    }
+
+                    head_output[b * T_dec * C + t1 * C + h * d_k + d] = weighted_sum;
+                }
+            }
+        }
+    }
+
+    // concat all heads' outputs and apply linear transformation
+    for (int b = 0; b < B; b++) {
+        for (int t = 0; t < T_dec; t++) {
+            for (int c = 0; c < C; c++) {
+                // Initialize output to bias
+                output[b * T_dec * C + t * C + c] = o_b[c];
+
+                // Add weighted sum of all heads
+                for (int h = 0; h < n_heads; h++) {
+                    int head_offset = h * d_k + (c % d_k);
+                    output[b * T_dec * C + t * C + c] += 
+                        head_output[b * T_dec * C + t * C + head_offset] * o_w[head_offset * C + c];
+                }
+            }
+        }
+    }
+}
+
+
