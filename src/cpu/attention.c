@@ -11,7 +11,7 @@ typedef struct {
     float* attn_weights;
 } AttentionActivations;
 
-void compute_qkv(
+void compute_qkv_forward(
     float* inputs, // Post-layernorm input, shape (B, T, C)
     float* Q,      // Query activations, shape (B, T, C)
     float* K,      // Key activations, shape (B, T, C)
