@@ -2,34 +2,6 @@
 #include <utils/softmax.h>
 #include <cmath>
 
-void init_query_key_value(
-    float** query_proj, 
-    float** key_proj, 
-    float** value_proj, 
-    int D_MODEL
-) {
-    *query_proj = (float*)malloc(D_MODEL * D_MODEL * sizeof(float));
-    *key_proj = (float*)malloc(D_MODEL * D_MODEL * sizeof(float));
-    *value_proj = (float*)malloc(D_MODEL * D_MODEL * sizeof(float));
-
-    if (*query_proj == NULL || *key_proj == NULL || *value_proj == NULL) {
-        printf("Failed to allocate memory for query, key, and value weights\n");
-        exit(1);
-    }
-
-    for (int i = 0; i < D_MODEL * D_MODEL; i++) {
-        (*query_proj)[i] = random_normal();
-        (*key_proj)[i] = random_normal();
-        (*value_proj)[i] = random_normal();
-    }
-}
-
-typedef struct {
-    float* qkv_w; // (C, 3 *C)
-    float* qkv_b; // (3 * C)
-    float* o_w;
-    float* o_b;
-} AttentionParameters;
 
 typedef struct {
     float* Q; // B, T, n_heads, d_k
