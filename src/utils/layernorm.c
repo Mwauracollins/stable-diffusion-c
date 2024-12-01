@@ -1,3 +1,24 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+
+/**
+ * Layernorm forward pass.
+ *
+ * This function performs layer normalization on input activations as described
+ * in the paper "Layer Normalization" by Ba et al. (2016).
+ *
+ * @param input The input tensor of shape (B, T, C).
+ * @param output The normalized output tensor of shape (B, T, C).
+ * @param gamma The scaling parameters of shape (C).
+ * @param beta The shift parameters of shape (C).
+ * @param rmean The running mean values of shape (B, T).
+ * @param rstd_dev The running standard deviation values of shape (B, T).
+ * @param B The batch size.
+ * @param T The sequence length.
+ * @param C The number of channels.
+ */
 void layernorm_forward(
     float* input, // (B, T, C)
     float* output, // Normalized output (B, T, C)
@@ -40,6 +61,25 @@ void layernorm_forward(
     }
 }
 
+/**
+ * Layernorm backward pass.
+ *
+ * This function computes the gradients of the loss with respect to the input,
+ * gamma, and beta parameters of the layer normalization layer.
+ *
+ * @param input The input tensor of shape (B, T, C).
+ * @param gamma The scaling parameters of shape (C).
+ * @param beta The shift parameters of shape (C).
+ * @param dinput The gradients of the loss with respect to the input, of shape (B, T, C).
+ * @param doutput The gradients of the loss with respect to the output, of shape (B, T, C).
+ * @param dgamma The gradients of the loss with respect to the scaling parameters, of shape (C).
+ * @param dbeta The gradients of the loss with respect to the shift parameters, of shape (C).
+ * @param rmean The running mean values of shape (B, T).
+ * @param rstd_dev The running standard deviation values of shape (B, T).
+ * @param B The batch size.
+ * @param T The sequence length.
+ * @param C The number of channels.
+ */
 void layernorm_backward(
     float* input, // (B, T, C)
     float* gamma, // (C)
@@ -54,8 +94,8 @@ void layernorm_backward(
 ) {
     //TODO: CHECK THIS MATH; YOU WERE A LIL TIPSY
     // initialize the gradients
-    memset(dgamma, 0, C * sizeof(float));
-    memset(dbeta, 0, C * sizeof(float));
+    // memset(dgamma, 0, C * sizeof(float));
+    // memset(dbeta, 0, C * sizeof(float));
 
     for (int b = 0; b < B; b++) {
         for (int t = 0; t < T; t++) {
