@@ -1,5 +1,5 @@
-#include <math.h>
 #include <stdlib.h>
+#include <math.h>
 
 float rand_normal() {
     float u1 = ((float) rand() / RAND_MAX);
